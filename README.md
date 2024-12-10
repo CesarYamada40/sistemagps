@@ -2,88 +2,69 @@
 
 Aplicativo web para rastreamento de localização GPS com funcionalidades CRUD completas.
 
-## Estrutura do Projeto
+## Funcionalidades
 
-```
-ProjetoLocalizacaoGPS/
-├── backend/               # API Django
-│   ├── gps_tracker/      # Configurações do projeto
-│   ├── locations/        # App de localizações
-│   └── manage.py
-├── frontend/             # Aplicação React
-│   ├── public/
-│   └── src/
-└── README.md
-```
+- ✅ Busca de endereços com conversão para coordenadas GPS
+- 🗺️ Visualização em mapa interativo
+- 📝 Adição de descrições às localizações
+- 📍 Marcadores no mapa
+- 🗑️ Exclusão de localizações
+- 📱 Interface responsiva
+
+## Tecnologias Utilizadas
+
+### Backend
+- Flask (Python)
+- SQLite
+- Flask-CORS
+
+### Frontend
+- HTML5
+- JavaScript
+- Leaflet (mapas)
+- OpenStreetMap
 
 ## Como Executar
 
-### Backend (Django)
-
-1. Criar e ativar ambiente virtual:
-```bash
-cd backend
-python -m venv env
-env\Scripts\activate  # Windows
-```
-
-2. Instalar dependências:
-```bash
-pip install -r requirements.txt
-```
-
-3. Executar migrações:
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-
-4. Criar superusuário:
-```bash
-python manage.py createsuperuser
-```
-
-5. Iniciar servidor:
-```bash
-python manage.py runserver
-```
-
-### Frontend (React)
+### Backend
 
 1. Instalar dependências:
 ```bash
-cd frontend
-npm install
+cd backend
+pip install -r requirements.txt
 ```
 
-2. Iniciar aplicação:
+2. Iniciar servidor:
 ```bash
-npm start
+python app.py
 ```
+O backend estará rodando em `http://127.0.0.1:5000`
 
-## Funcionalidades
+### Frontend
 
-- ✅ CRUD completo de localizações
-- 🗺️ Visualização em mapa interativo
-- 📱 Interface responsiva
-- 🔒 Autenticação de usuários
-- 📍 Rastreamento GPS em tempo real
+Abra o arquivo `frontend/index.html` no navegador ou use um servidor web simples:
+
+```bash
+cd frontend
+python -m http.server 8000
+```
+O frontend estará disponível em `http://127.0.0.1:8000`
 
 ## API Endpoints
 
-- `GET /api/locations/` - Listar localizações
-- `POST /api/locations/` - Criar localização
-- `GET /api/locations/{id}/` - Detalhes da localização
-- `PUT /api/locations/{id}/` - Atualizar localização
-- `DELETE /api/locations/{id}/` - Deletar localização
+- `GET /api/locations` - Lista todas as localizações
+- `POST /api/locations` - Adiciona nova localização
+- `DELETE /api/locations/{id}` - Remove uma localização
+- `PUT /api/locations/{id}` - Atualiza uma localização
 
-## Tecnologias
+## Contribuindo
 
-- **Backend**: Django, Django REST Framework
-- **Frontend**: React, Leaflet
-- **Banco de Dados**: PostgreSQL
-- **Autenticação**: JWT
+1. Faça um fork do projeto
+2. Crie uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
+3. Commit suas mudanças (`git commit -m 'Add some AmazingFeature'`)
+4. Push para a branch (`git push origin feature/AmazingFeature`)
+5. Abra um Pull Request
 
 ## Licença
 
-MIT
+Este projeto está sob a licença MIT.
