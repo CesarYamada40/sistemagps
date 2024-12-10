@@ -1,23 +1,24 @@
 # Python
 __pycache__/
 *.py[cod]
+*$py.class
 env/
 venv/
 .env
+*.db
 
-# Django
-*.log
-db.sqlite3
-media/
-
-# Node
-node_modules/
-build/
-.DS_Store
-.env.local
-npm-debug.log*
-
-# IDE
+# VS Code
 .vscode/
+
+# PyCharm
 .idea/
-*.swp
+
+# Logs
+*.log
+
+# Local database
+locations.db
+
+# System files
+.DS_Store
+Thumbs.db

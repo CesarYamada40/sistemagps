@@ -1,40 +1,82 @@
-Defaulting to user installation because normal site-packages is not writeable
-Collecting Flask==2.0.1 (from -r requirements.txt (line 1))
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
+from flask_cors import CORS
+import sqlite3
+import datetime
+import os
 
 app = Flask(__name__)
+CORS(app)
 
-# Sample data
-locations = [
-    {'id': 1, 'name': 'Location 1', 'latitude': 40.7128, 'longitude': -74.0060},
-    {'id': 2, 'name': 'Location 2', 'latitude': 34.0522, 'longitude': -118.2437}
-]
+# Configuração do banco de dados SQLite
+def init_db():
+    conn = sqlite3.connect('locations.db')
+    c = conn.cursor()
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS locations
+        (id INTEGER PRIMARY KEY AUTOINCREMENT,
+         latitude REAL NOT NULL,
+         longitude REAL NOT NULL,
+         description TEXT,
+         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)
+    ''')
+    conn.commit()
+    conn.close()
 
-@app.route('/locations', methods=['GET'])
+# Inicializa o banco de dados
+init_db()
+
+@app.route('/')
+def home():
+    return jsonify({"message": "GPS Location Tracker API", "status": "running"})
+
+@app.route('/api/locations', methods=['GET'])
 def get_locations():
-    return jsonify({'locations': locations})
+    conn = sqlite3.connect('locations.db')
+    c = conn.cursor()
+    c.execute('SELECT * FROM locations ORDER BY timestamp DESC')
+    locations = [{'id': row[0], 'latitude': row[1], 'longitude': row[2], 
+                 'description': row[3], 'timestamp': row[4]} 
+                for row in c.fetchall()]
+    conn.close()
+    return jsonify(locations)
 
-@app.route('/locations', methods=['POST'])
+@app.route('/api/locations', methods=['POST'])
 def add_location():
-    new_location = request.get_json()
-    locations.append(new_location)
-    return jsonify(new_location), 201
+    data = request.json
+    if not data or 'latitude' not in data or 'longitude' not in data:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    conn = sqlite3.connect('locations.db')
+    c = conn.cursor()
+    c.execute('INSERT INTO locations (latitude, longitude, description) VALUES (?, ?, ?)',
+              (data['latitude'], data['longitude'], data.get('description', '')))
+    conn.commit()
+    location_id = c.lastrowid
+    conn.close()
+    return jsonify({'id': location_id, 'message': 'Location added successfully'}), 201
 
-@app.route('/locations/<int:location_id>', methods=['PUT'])
-def update_location(location_id):
-    location = next((loc for loc in locations if loc['id'] == location_id), None)
-    if location is None:
-        return jsonify({'error': 'Location not found'}), 404
+@app.route('/api/locations/<int:id>', methods=['DELETE'])
+def delete_location(id):
+    conn = sqlite3.connect('locations.db')
+    c = conn.cursor()
+    c.execute('DELETE FROM locations WHERE id = ?', (id,))
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Location deleted successfully'})
 
-    data = request.get_json()
-    location.update(data)
-    return jsonify(location)
-
-@app.route('/locations/<int:location_id>', methods=['DELETE'])
-def delete_location(location_id):
-    global locations
-    locations = [loc for loc in locations if loc['id'] != location_id]
-    return '', 204
+@app.route('/api/locations/<int:id>', methods=['PUT'])
+def update_location(id):
+    data = request.json
+    if not data or 'latitude' not in data or 'longitude' not in data:
+        return jsonify({'error': 'Missing required fields'}), 400
+    
+    conn = sqlite3.connect('locations.db')
+    c = conn.cursor()
+    c.execute('UPDATE locations SET latitude = ?, longitude = ?, description = ? WHERE id = ?',
+              (data['latitude'], data['longitude'], data.get('description', ''), id))
+    conn.commit()
+    conn.close()
+    return jsonify({'message': 'Location updated successfully'})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, port=5000)

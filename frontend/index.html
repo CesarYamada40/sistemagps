@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Location Tracker</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #map {
+            height: 400px;
+            margin-top: 20px;
+            border-radius: 8px;
+        }
+        #locationsList {
+            margin-top: 20px;
+        }
+        .location-item {
+            background: white;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .delete-btn {
+            background-color: #dc3545;
+            margin-left: 10px;
+        }
+        .delete-btn:hover {
+            background-color: #c82333;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>GPS Location Tracker</h1>
+        
+        <div class="form-group">
+            <label for="address">Endereço:</label>
+            <input type="text" id="address" placeholder="Digite o endereço">
+        </div>
+        
+        <div class="form-group">
+            <label for="description">Descrição:</label>
+            <input type="text" id="description" placeholder="Digite uma descrição para o local">
+        </div>
+        
+        <button onclick="searchAddress()">Buscar Localização</button>
+    </div>
+
+    <div class="container">
+        <div id="map"></div>
+    </div>
+
+    <div class="container">
+        <h2>Localizações Salvas</h2>
+        <div id="locationsList"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        let map;
+        let marker;
+        const API_URL = 'http://127.0.0.1:5000/api';
+
+        // Inicializa o mapa
+        function initMap() {
+            map = L.map('map').setView([-23.5505, -46.6333], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Busca endereço usando a API do Nominatim
+        async function searchAddress() {
+            const address = document.getElementById('address').value;
+            const description = document.getElementById('description').value;
+            
+            try {
+                const response = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`);
+                const data = await response.json();
+                
+                if (data && data.length > 0) {
+                    const location = data[0];
+                    const lat = parseFloat(location.lat);
+                    const lon = parseFloat(location.lon);
+                    
+                    // Atualiza o mapa
+                    map.setView([lat, lon], 16);
+                    
+                    // Adiciona ou move o marcador
+                    if (marker) {
+                        marker.setLatLng([lat, lon]);
+                    } else {
+                        marker = L.marker([lat, lon]).addTo(map);
+                    }
+                    
+                    // Salva a localização
+                    saveLocation(lat, lon, description);
+                } else {
+                    alert('Endereço não encontrado');
+                }
+            } catch (error) {
+                console.error('Erro ao buscar endereço:', error);
+                alert('Erro ao buscar endereço');
+            }
+        }
+
+        // Salva a localização no backend
+        async function saveLocation(lat, lon, description) {
+            try {
+                const response = await fetch(`${API_URL}/locations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        latitude: lat,
+                        longitude: lon,
+                        description: description
+                    })
+                });
+                
+                if (response.ok) {
+                    loadLocations();
+                    document.getElementById('address').value = '';
+                    document.getElementById('description').value = '';
+                } else {
+                    alert('Erro ao salvar localização');
+                }
+            } catch (error) {
+                console.error('Erro ao salvar localização:', error);
+                alert('Erro ao salvar localização');
+            }
+        }
+
+        // Carrega as localizações salvas
+        async function loadLocations() {
+            try {
+                const response = await fetch(`${API_URL}/locations`);
+                const locations = await response.json();
+                
+                const locationsList = document.getElementById('locationsList');
+                locationsList.innerHTML = '';
+                
+                locations.forEach(location => {
+                    const div = document.createElement('div');
+                    div.className = 'location-item';
+                    div.innerHTML = `
+                        <strong>${location.description || 'Sem descrição'}</strong><br>
+                        Latitude: ${location.latitude}<br>
+                        Longitude: ${location.longitude}<br>
+                        Data: ${new Date(location.timestamp).toLocaleString()}
+                        <button class="delete-btn" onclick="deleteLocation(${location.id})">Deletar</button>
+                    `;
+                    locationsList.appendChild(div);
+                });
+            } catch (error) {
+                console.error('Erro ao carregar localizações:', error);
+            }
+        }
+
+        // Deleta uma localização
+        async function deleteLocation(id) {
+            if (!confirm('Tem certeza que deseja deletar esta localização?')) return;
+            
+            try {
+                const response = await fetch(`${API_URL}/locations/${id}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    loadLocations();
+                } else {
+                    alert('Erro ao deletar localização');
+                }
+            } catch (error) {
+                console.error('Erro ao deletar localização:', error);
+                alert('Erro ao deletar localização');
+            }
+        }
+
+        // Inicializa o mapa quando a página carregar
+        window.onload = function() {
+            initMap();
+            loadLocations();
+        };
+    </script>
+</body>
+</html>
