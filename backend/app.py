@@ -8,8 +8,10 @@ app = Flask(__name__)
 CORS(app)
 
 # Configuração do banco de dados SQLite
+DATABASE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'locations.db')
+
 def init_db():
-    conn = sqlite3.connect('locations.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS locations
@@ -31,7 +33,7 @@ def home():
 
 @app.route('/api/locations', methods=['GET'])
 def get_locations():
-    conn = sqlite3.connect('locations.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute('SELECT * FROM locations ORDER BY timestamp DESC')
     locations = [{'id': row[0], 'latitude': row[1], 'longitude': row[2], 
@@ -46,10 +48,10 @@ def add_location():
     if not data or 'latitude' not in data or 'longitude' not in data:
         return jsonify({'error': 'Missing required fields'}), 400
     
-    conn = sqlite3.connect('locations.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute('INSERT INTO locations (latitude, longitude, description) VALUES (?, ?, ?)',
-              (data['latitude'], data['longitude'], data.get('description', '')))
+             (data['latitude'], data['longitude'], data.get('description', '')))
     conn.commit()
     location_id = c.lastrowid
     conn.close()
@@ -57,7 +59,7 @@ def add_location():
 
 @app.route('/api/locations/<int:id>', methods=['DELETE'])
 def delete_location(id):
-    conn = sqlite3.connect('locations.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute('DELETE FROM locations WHERE id = ?', (id,))
     conn.commit()
@@ -67,16 +69,17 @@ def delete_location(id):
 @app.route('/api/locations/<int:id>', methods=['PUT'])
 def update_location(id):
     data = request.json
-    if not data or 'latitude' not in data or 'longitude' not in data:
-        return jsonify({'error': 'Missing required fields'}), 400
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
     
-    conn = sqlite3.connect('locations.db')
+    conn = sqlite3.connect(DATABASE_PATH)
     c = conn.cursor()
     c.execute('UPDATE locations SET latitude = ?, longitude = ?, description = ? WHERE id = ?',
-              (data['latitude'], data['longitude'], data.get('description', ''), id))
+             (data['latitude'], data['longitude'], data.get('description', ''), id))
     conn.commit()
     conn.close()
     return jsonify({'message': 'Location updated successfully'})
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port)
